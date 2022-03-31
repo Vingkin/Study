@@ -51,19 +51,19 @@
 
 ## 0x03 过期数据删除策略
 
-**惰性删除：**在取出key的时候对数据进行过期检查。这样对CPU友好，但是会造成太多过期key没有被删除
+**惰性删除：** 在取出key的时候对数据进行过期检查。这样对CPU友好，但是会造成太多过期key没有被删除
 
-**定期删除：**每隔一段时间抽取一批key执行删除过期key操作。并且Redis底层会通过限制删除操作的时常和频率来减少删除操作对CPU的影响
+**定期删除：** 每隔一段时间抽取一批key执行删除过期key操作。并且Redis底层会通过限制删除操作的时常和频率来减少删除操作对CPU的影响
 
 定期删除对内存更加友好，惰性删除对CPU更加友好。所以Redis采用两者结合的方式进行过期数据删除
 
 ## 0x04 Redis内存淘汰机制
 
-* **volatile-lru（least recently used）：**从已设置过期时间的数据集(`server.db[i].expires`)中挑选最近最少使用的数据淘汰
-* **volatile-ttl：**从已设置过期时间的数据集中挑选即将要过期的数据淘汰
-* **volatile-random：**从已设置过期时间的数据集中任意选择数据淘汰
-* **allkeys-lru：（least recently used）：**当内存不足以容纳新写入数据时，在键空间中，移出最近最少使用的key（最常用）
-* **allkeys-random：**从数据集中任意选择数据淘汰
-* **no-eviction：**禁止驱逐数据，也就是说当内存不足以容纳新写入数据时，新写入操作会报错。（基本没人使用）
-* **volatile-lfu（least frequently used）：**从已设置过期时间的数据集中挑选最不经常使用的数据淘汰
-* **allkeys-lfu（least frequently used）：**当内存不足以容纳新写入的数据时，在键空间中移出最不经常使用的key
+* **volatile-lru（least recently used）：** 从已设置过期时间的数据集(`server.db[i].expires`)中挑选最近最少使用的数据淘汰
+* **volatile-ttl：** 从已设置过期时间的数据集中挑选即将要过期的数据淘汰
+* **volatile-random：** 从已设置过期时间的数据集中任意选择数据淘汰
+* **allkeys-lru：（least recently used）：** 当内存不足以容纳新写入数据时，在键空间中，移出最近最少使用的key（最常用）
+* **allkeys-random：** 从数据集中任意选择数据淘汰
+* **no-eviction： ** 禁止驱逐数据，也就是说当内存不足以容纳新写入数据时，新写入操作会报错。（基本没人使用）
+* **volatile-lfu（least frequently used）：** 从已设置过期时间的数据集中挑选最不经常使用的数据淘汰
+* **allkeys-lfu（least frequently used）：** 当内存不足以容纳新写入的数据时，在键空间中移出最不经常使用的key
