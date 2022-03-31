@@ -64,6 +64,6 @@
 * **volatile-random：** 从已设置过期时间的数据集中任意选择数据淘汰
 * **allkeys-lru：（least recently used）：** 当内存不足以容纳新写入数据时，在键空间中，移出最近最少使用的key（最常用）
 * **allkeys-random：** 从数据集中任意选择数据淘汰
-* **no-eviction： ** 禁止驱逐数据，也就是说当内存不足以容纳新写入数据时，新写入操作会报错。（基本没人使用）
+* **no-eviction：** 禁止驱逐数据，也就是说当内存不足以容纳新写入数据时，新写入操作会报错。（基本没人使用）
 * **volatile-lfu（least frequently used）：** 从已设置过期时间的数据集中挑选最不经常使用的数据淘汰
 * **allkeys-lfu（least frequently used）：** 当内存不足以容纳新写入的数据时，在键空间中移出最不经常使用的key
