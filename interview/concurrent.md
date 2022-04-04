@@ -127,8 +127,12 @@ class Monitor {
 **六种状态**
 
 > Java中Thread.State枚举描述的
+>
+> 下图RUNNABLE中的阻塞状态应该去除
 
 ![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/image-20220225202815248.png)
+
+**线程的状态转换**
 
 ![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/image-20220303171324316.png)
 
@@ -230,7 +234,13 @@ public static void main(String[] args) {
 >
 > https://blog.csdn.net/m0_37989980/article/details/111408759#t8
 
-## 0x0D. sleep()和wait()的区别
+## 0x0D. wait()和notify()
+
+> Object类中的方法
+>
+> https://blog.csdn.net/m0_37989980/article/details/111412907#t0
+
+## 0x0E. sleep()和wait()的区别
 
 1. sleep是Thread方法，wait是Object方法
 2. sleep不需要强制和synchronized配合使用，但wait需要和synchronized一起使用
@@ -241,6 +251,8 @@ public static void main(String[] args) {
 ## 0x0F. 保护性暂停模式
 
 > 用于一个线程等待另一个线程的执行结果
+>
+> join()内部采用的就是这个原理，不过join()中是一个线程等待另一个线程结束
 
 * 有一个结果需要从一个线程传递到另一个线程，让他们关联同一个GuardedObject
 * 如果有结果不断从一个线程到另一个线程，那么可以使用消息队列（生产者消费者模式）
@@ -259,13 +271,96 @@ public static void main(String[] args) {
 
 ![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/image-20220303162257793.png)
 
-## 0x0A. wait和notify
-
-> https://blog.csdn.net/m0_37989980/article/details/111412907#t0
-
-## 0x0B. park和unpark
+## 0x11. park()和unpark()
 
 > https://blog.csdn.net/m0_37989980/article/details/111412907#t8
+
+* park和unpark是LockSupport类中的方法，运行时会调用Unsafe类中的native方法
+* 每个线程都会和一个park对象关联起来，由三部分组成`_counter`,`_cond`,`_mutex_`。核心部分是counter，可以理解为一个标记位。
+* 当调用park时会查看counter是否为0，为0则进入cond阻塞。为1则继续运行并将counter置为0。
+* 当调用unpark时，会将counter置为1，若之前的counter值为0，还会唤醒阻塞的线程。
+* **如果先调用unpark再调用park不会阻塞线程。调用unpark后将counter置为1，再调用park线程发现counter为1继续运行并将counter置为0。**
+
+**park()&unpark()与wait()&notify()对比**
+
+1. wait，notify和notifyAll必须配合Object Monitor(synchronized)一起使用，而park和unpark不必
+2. park，unpark是以线程为单位来【阻塞】和【唤醒】线程，而notify只能随机唤醒一个等待线程，notifyAll是唤醒所有等待线程，无法唤醒指定的线程。
+3. park，unpark可以先unpark，而wait，notify不能先notify
+
+## 0x12. 死锁，活锁，饥饿
+
+### 死锁
+
+代码演示：
+
+```java
+public static void main(String[] args) {
+	final Object A = new Object();
+	final Object B = new Object();
+	
+	new Thread(()->{
+		synchronized (A) {
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			synchronized (B) {
+
+			}
+		}
+	}).start();
+
+	new Thread(()->{
+		synchronized (B) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			synchronized (A) {
+
+			}
+		}
+	}).start();
+}
+```
+
+**发生死锁的必要条件：**
+
+1. 互斥条件：在一段时间内，一种资源只能被一个线程所使用
+2. 请求和保持条件：线程已经拥有了至少一种资源，同时又去申请其他资源。因为其他资源被别的线程所使用。该线程进入阻塞状态同时不释放自己已有的资源。
+3. 不可抢占条件：进程对已获得的资源在未使用完成前不能被抢占，之恶能在线程使用完后自己释放。
+4. 循环等待条件：发生死锁时，必然存在一个线程---资源的循环链
+
+**定位死锁的方法：**
+
+1. `jstack + 进程id`命令查看线程状态有Java层面死锁线程信息
+2. `jconsole`有死锁检测功能
+
+**避免死锁的方法：**
+
+- 在线程使用锁对象时, 采用**固定加锁的顺序**, 可以使用Hash值的大小来确定加锁的先后
+- 尽可能缩减加锁的范围, 等到操作共享变量的时候才加锁
+- 使用可释放的定时锁 (一段时间申请不到锁的权限了, 直接释放掉)
+
+### 活锁
+
+- `活锁`出现在两个线程 **`互相改变对方的结束条件`**，谁也无法结束。
+
+**避免活锁的方法：**
+
+* 在线程执行时，中途给予不同的间隔时间, 让某个线程先结束即可。
+
+**死锁与活锁的区别：**
+
+* 死锁是因为线程互相持有对象想要的锁，并且都不释放，最后到时线程阻塞，停止运行的现象。
+* 活锁是因为线程间修改了对方的结束条件，而导致代码一直在运行，却一直运行不完的现象。
+
+### 饥饿
+
+- 某些线程因为优先级太低，导致一直无法获得资源的现象。
+- 在使用`顺序加锁`时，可能会出现`饥饿现象`
 
 ## 0x0C. CAS的特点
 
