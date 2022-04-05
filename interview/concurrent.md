@@ -285,7 +285,7 @@ public static void main(String[] args) {
 
 1. wait，notify和notifyAll必须配合Object Monitor(synchronized)一起使用，而park和unpark不必
 2. park，unpark是以线程为单位来【阻塞】和【唤醒】线程，而notify只能随机唤醒一个等待线程，notifyAll是唤醒所有等待线程，无法唤醒指定的线程。
-3. park，unpark可以先unpark，而wait，notify不能先notify
+3. ~~park，unpark可以先unpark，而wait，notify不能先notify~~
 
 ## 0x12. 死锁，活锁，饥饿
 
@@ -361,6 +361,133 @@ public static void main(String[] args) {
 
 - 某些线程因为优先级太低，导致一直无法获得资源的现象。
 - 在使用`顺序加锁`时，可能会出现`饥饿现象`
+
+## 0x13. 固定线程运行顺序
+
+**wait()&notify()**
+
+```java
+public class Test {
+
+    static final Object lock = new Object();
+    static boolean t2runned = false;
+
+    public static void main(String[] args) {
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (lock) {
+                    while (!t2runned) {
+                        try {
+                            lock.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    log.debug("1");
+                }
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                synchronized(lock) {
+                    log.debug("2");
+                    t2runned = true;
+                    lock.notify();
+                }
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+
+    }
+}
+```
+
+**park()&unpark()**
+
+```java
+public class Test {
+
+    public static void main(String[] args) {
+        
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                LockSupport.park();
+                log.debug("1");
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                log.debug("2");
+                LockSupport.unpark(t1);
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+
+    }
+}
+```
+
+**await()&signal()**
+
+```java
+public class Test {
+
+    private static ReentrantLock lock = new ReentrantLock();
+    private static boolean t2runned = false;
+    static Condition condition1 = lock.newCondition();
+
+    public static void main(String[] args) {
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                lock.lock();
+                try {
+                    while (!t2runned) {
+                        try {
+                            condition1.await();
+                            log.debug("1");
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                lock.lock();
+                try {
+                    log.debug("2");
+                    t2runned = true;
+                    condition1.signal();
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+
+    }
+}
+```
 
 ## 0x0C. CAS的特点
 
