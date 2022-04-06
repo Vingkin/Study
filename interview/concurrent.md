@@ -489,11 +489,197 @@ public class Test {
 }
 ```
 
+## 0x14. 线程交替输出
+
+**wait()&notify()**
+
+```java
+public class Test {
+
+    static boolean t1runned = false;
+    static boolean t2runned = true;
+    static final Object lock = new Object();
+
+    public static void main(String[] args) {
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    synchronized (lock) {
+                        while (!t2runned) {
+                            try {
+                                lock.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        log.debug("1");
+                        t1runned = true;
+                        t2runned = false;
+                        lock.notify();
+                    }
+                }
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    synchronized (lock) {
+                        while (!t1runned) {
+                            try {
+                                lock.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        log.debug("2");
+                        t1runned = false;
+                        t2runned = true;
+                        lock.notify();
+                    }
+                }
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+**park()&unpark()**
+
+```java
+public class Test {
+
+    volatile static boolean t1runned = false;
+    volatile static boolean t2runned = true;
+    static final Object lock = new Object();
+    static Thread t1;
+    static Thread t2;
+
+    public static void main(String[] args) {
+
+        t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    if (!t2runned) {
+                        LockSupport.park();
+                    }
+                    log.debug("1");
+                    t2runned = false;
+                    t1runned = true;
+                    LockSupport.unpark(t2);
+                }
+            }
+        }, "t1");
+
+        t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    if  (!t1runned) {
+                        LockSupport.park();
+                    }
+                    log.debug("2");
+                    t2runned = true;
+                    t1runned = false;
+                    LockSupport.unpark(t1);
+                }
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+**await()&signal()**
+
+```java
+public class Test {
+
+    static boolean t1runned = false;
+    static boolean t2runned = true;
+
+    public static void main(String[] args) {
+
+        ReentrantLock reentrantLock = new ReentrantLock();
+        Condition condition = reentrantLock.newCondition();
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    reentrantLock.lock();
+                    try {
+                        while (!t2runned) {
+                            condition.await();
+                        }
+                        log.debug("1");
+                        t1runned = true;
+                        t2runned = false;
+                        condition.signal();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        reentrantLock.unlock();
+                    }
+                }
+            }
+        }, "t1");
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 10; i++) {
+                    reentrantLock.lock();
+                    try {
+                        while (!t1runned) {
+                            condition.await();
+                        }
+                        log.debug("2");
+                        t1runned = false;
+                        t2runned = true;
+                        condition.signal();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        reentrantLock.unlock();
+                    }
+                }
+            }
+        }, "t2");
+
+        t1.start();
+        t2.start();
+    }
+}
+```
+
+## 0x15. 并发编程的三大特性
+
+* 原子性：保证指令不会受到线程上下文切换的影响。**程序的原子性是指整个程序中的所有操作，要么全部完成，要么全部失败，不可能滞留在中间某个环节；在多个线程一起执行的时候，一个操作一旦开始，就不会被其他线程所打断。**
+* 可见性：保证指令不会受cpu缓存的影响。**一个线程对共享变量值的修改，能够及时地被其他线程看到**
+* 有序性，保证指令不会受到cpu指令并行优化的影响
+
+## 0x16. volatile和synchronized
+
+* 一个线程对volatile变量的修改对另一个线程可见，不能保证原子性，仅用在一个写线程，多个读线程的情况。（比如volatile修饰的i，两个线程一个i++一个i--，只能保证看到最新值，不能解决字节码指令交错的问题。）
+* synchronized语句块既能保证代码块的原子性，也同时能保证代码块内变量的可见性。但缺点是synchronized属于重量级锁，性能相对较低。
+* volatile关键字只能修饰变量，synchronized还可以修饰方法，类以及代码块。
+* volatile关键字主要用于解决变量在多个线程之间的可见性，而synchronized关键字解决的是多个线程之间访问资源的同步性。
+
 ## 0x0C. CAS的特点
 
 结合CAS和volatile可以实现无锁并发，适用于线程数少、多核CPU的场景下。
 
-* CAS是基于乐观锁的思想（实际上并不是锁）：最乐观的估计，不怕别的线程来修复共享变量，就算改了也没关系，重试即可
+* CAS是基于乐观锁的思想~~（实际上并不是锁）~~：最乐观的估计，不怕别的线程来修复共享变量，就算改了也没关系，重试即可
 
 * synchronized是基于悲观锁的思想：最悲观的估计，得防着其他线程来修改共享变量，我上了锁你们都别想改，我改完了解开锁，你们才有机会
 
