@@ -52,7 +52,9 @@ public class Singleton4 {
     private volatile static Singleton4 instance;
     private Singleton4() {}
     public static Singleton4 getInstance() {
+        // instanceb
         if (instance == null) {
+            // 首次创建会同步
             synchronized (Singleton4.class) {
                 if (instance == null) {
                     instance = new Singleton4();
