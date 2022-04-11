@@ -692,29 +692,7 @@ volatile的底层实现原理是内存屏障
 * volatile的有序性是通过插入内存屏障来保证指令按照顺序执行。不会存在后面的指令跑到前面的指令之前来执行。是保证编译器优化的时候不会让指令乱序。
 * **synchronized是不能保证指令重排的。**
 
-## 0x0C. CAS的特点
-
-结合CAS和volatile可以实现无锁并发，适用于线程数少、多核CPU的场景下。
-
-* CAS是基于乐观锁的思想~~（实际上并不是锁）~~：最乐观的估计，不怕别的线程来修复共享变量，就算改了也没关系，重试即可
-
-* synchronized是基于悲观锁的思想：最悲观的估计，得防着其他线程来修改共享变量，我上了锁你们都别想改，我改完了解开锁，你们才有机会
-
-* CAS体现的是无锁并发，无阻塞并发
-
-  * 因为没有使用synchronized，所以线程不会陷入阻塞，这是效率提升的因素之一
-  * 但是如果竞争激烈，可以想到重试必然频繁发生，反而效率会受影响
-
-## 0x0D. 原子引用ABA问题
-
-> 主线程仅能判断出共享变量的值与初值A是否相同，不能感知到这种从A改为B又改回A的情况，如果主线程希望：
->
-> 只要有其他线程【动过了】共享变量，那么自己的cas就算失败，这时仅比较值是不够的，还需要再加一个版本号
-
-1. 通过AtomicStampedReference判断是否更改了版本号，传入的是整型变量
-2. 通过AtomicMarkableReference判断是否被修改，传入的是布尔变量
-
-## 0x0E. i++是否线程安全
+## 0x19. i++是否线程安全
 
 > 提到这个问题得区分i是成员变量/静态变量还是局部变量，如果是前者需要考虑，对于局部变量不管是基本类型还是包装类型都不需要考虑，包装类型比如Integer是不可变类，是线程安全的。
 >
@@ -738,4 +716,347 @@ putstatic    i // 将修改后的值存入静态变量i
 
 1. 对i++操作的方法加同步锁，同时只能由一个线程执行i++
 2. 使用支持原子类型操作的类，比如AtomicInteger，内部使用的是CAS
+
+## 0x11A. CAS的特点
+
+结合CAS和volatile可以实现无锁并发，适用于线程数少、多核CPU的场景下。
+
+* CAS是基于乐观锁的思想~~（实际上并不是锁）~~：最乐观的估计，不怕别的线程来修复共享变量，就算改了也没关系，重试即可
+
+* synchronized是基于悲观锁的思想：最悲观的估计，得防着其他线程来修改共享变量，我上了锁你们都别想改，我改完了解开锁，你们才有机会
+
+* CAS体现的是无锁并发，无阻塞并发
+
+  * 因为没有使用synchronized，所以线程不会陷入阻塞，这是效率提升的因素之一
+  * 但是如果竞争激烈，可以想到重试必然频繁发生，反而效率会受影响
+
+## 0x1B. Atomic原子类
+
+> [并发编程面试必备：JUC 中的 Atomic 原子类总结 (qq.com)](https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&mid=2247484834&idx=1&sn=7d3835091af8125c13fc6db765f4c5bd&source=41#wechat_redirect)
+
+1. 原子整数
+
+   1. AtomicInteger
+   2. AtomicLong
+   3. AtomicBoolean
+
+   ```java
+   public static void main(String[] args) {
+       AtomicInteger i = new AtomicInteger(0);
+       
+       // 获取并自增（i = 0, 结果 i = 1, 返回 0），类似于 i++
+       System.out.println(i.getAndIncrement());
+       
+       // 自增并获取（i = 1, 结果 i = 2, 返回 2），类似于 ++i
+       System.out.println(i.incrementAndGet());
+       
+       // 自减并获取（i = 2, 结果 i = 1, 返回 1），类似于 --i
+       System.out.println(i.decrementAndGet());
+       
+       // 获取并自减（i = 1, 结果 i = 0, 返回 1），类似于 i--
+       System.out.println(i.getAndDecrement());
+       
+       // 获取并加值（i = 0, 结果 i = 5, 返回 0）
+       System.out.println(i.getAndAdd(5));
+       
+       // 加值并获取（i = 5, 结果 i = 0, 返回 0）
+       System.out.println(i.addAndGet(-5));
+       
+       // 获取并更新（i = 0, p 为 i 的当前值, 结果 i = -2, 返回 0）
+       // 函数式编程接口，其中函数中的操作能保证原子，但函数需要无副作用
+       System.out.println(i.getAndUpdate(p -> p - 2));
+       
+       // 更新并获取（i = -2, p 为 i 的当前值, 结果 i = 0, 返回 0）
+       // 函数式编程接口，其中函数中的操作能保证原子，但函数需要无副作用
+       System.out.println(i.updateAndGet(p -> p + 2));
+       
+       // 获取并计算（i = 0, p 为 i 的当前值, x 为参数1, 结果 i = 10, 返回 0）
+       // 函数式编程接口，其中函数中的操作能保证原子，但函数需要无副作用
+       // getAndUpdate 如果在 lambda 中引用了外部的局部变量，要保证该局部变量是 final 的
+       // getAndAccumulate 可以通过 参数1 来引用外部的局部变量，但因为其不在 lambda 中因此不必是 final
+       System.out.println(i.getAndAccumulate(10, (p, x) -> p + x));
+       
+       // 计算并获取（i = 10, p 为 i 的当前值, x 为参数1值, 结果 i = 0, 返回 0）
+       // 函数式编程接口，其中函数中的操作能保证原子，但函数需要无副作用
+       System.out.println(i.accumulateAndGet(-10, (p, x) -> p + x));
+   }
+   ```
+
+2. 原子引用
+
+   > 原子引用的作用: **保证引用类型的共享变量是线程安全的(确保这个原子引用没有引用过别人)**
+
+   1. AtomicReference
+   2. AtomicStampedReference
+   3. AtomicMarkableReference
+
+3. 原子数组
+
+   > 保证数组内元素的线程安全
+
+   1. AtomicIntegerArray
+   2. AtomicLongArray
+   3. AtomicReferenceArray
+
+4. 字段更新器
+
+   > 保证`多线程`访问`同一个对象的成员变量`时, `成员变量的线程安全性`。
+
+   1. AtomicIntegerFieldUpdater
+   2. AtomicLongFieldUpdater
+   3. AtomicReferenceFieldUpdater
+
+5. 原子累加器
+
+   1. LongAdder
+   2. LongAccumulator
+   3. DoubleAdder
+   4. DoubleAccumulator
+
+## 0x1C. 原子引用ABA问题
+
+> 采用CAS主线程仅能判断出共享变量的值与初值A是否相同，不能感知到这种从A改为B又改回A的情况，如果主线程希望：
+>
+> 只要有其他线程【动过了】共享变量，那么自己的cas就算失败，这时仅比较值是不够的，还需要再加一个版本号
+
+1. 通过AtomicStampedReference判断是否更改了版本号，传入的是整型变量
+2. 通过AtomicMarkableReference判断是否被修改，传入的是布尔变量
+
+## 0x1D. LongAdder原理
+
+```java
+// 累加单元数组，懒惰初始化
+transient volatile Cell[] cells;
+// 基础值，如果没有竞争，则用cas累加这个域
+transient volatile long base;
+// 在cells创建或扩容时，置为1，表示加锁
+transient volatile int cellsBusy;
+```
+
+**性能提升的原因很简单，就是在有竞争时，设置多个`累加单元`(但不会超过cpu的核心数)，Therad-0 累加 Cell[0]，而 Thread-1 累加Cell[1]… 最后将结果汇总。这样它们在累加时操作的不同的 Cell 变量，`因此减少了 CAS 重试失败`，从而提高性能。**
+
+**之前AtomicLong等都是在一个`共享资源变量`上进行竞争, `while(true)`循环进行CAS重试, 性能没有`LongAdder`高**
+
+## 0x1E. Unsafe
+
+> Unsafe并不是表示线程不安全，而是表示Unsafe类中的操作不安全，因为是对于底层的操作。
+>
+> Unsafe对象提供了非常底层的，操作系内存、线程的方法，Unsafe对象不能直接调用，只能通过反射获得
+
+```java
+Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+theUnsafe.setAccessible(true);
+Unsafe unsafe = (Unsafe) theUnsafe.get(null);
+System.out.println(unsafe);
+```
+
+## 0x1F. 不可变类
+
+**final的使用**
+
+* 属性用final修饰保证该属性是只读的，不能修改
+* 类用final修饰保证了类不能被继承，该类中的方法不能被重写，防止子类无意间破坏不变性
+
+**保护性拷贝**
+
+使用字符串时，也有一些跟修改相关的方法啊，比如`substring、replace` 等，那么下面就看一看这些方法是 如何实现的，就以 substring 为例：
+
+```java
+public String substring(int beginIndex, int endIndex) {
+    if (beginIndex < 0) {
+        throw new StringIndexOutOfBoundsException(beginIndex);
+    }
+    if (endIndex > value.length) {
+        throw new StringIndexOutOfBoundsException(endIndex);
+    }
+    int subLen = endIndex - beginIndex;
+    if (subLen < 0) {
+        throw new StringIndexOutOfBoundsException(subLen);
+    }
+    // 上面是一些校验，下面才是真正的创建新的String对象
+    return ((beginIndex == 0) && (endIndex == value.length)) ? this
+            : new String(value, beginIndex, subLen);
+}
+```
+
+发现其方法最后是调用String 的构造方法创建了一个新字符串，再进入这个构造看看，是否对 `final char[] value` 做出了修改：结果发现也没有，构造新字符串对象时，会生成新的 `char[] value`，对内容进行复制。
+这种通过创建副本对象来避免共享的手段称之为【保护性拷贝（defensive copy）】
+
+## 0x20. final原理
+
+```java
+public class TestFinal {
+	final int a = 20; 
+}
+```
+
+```java
+0: aload_0
+1: invokespecial #1 // Method java/lang/Object."<init>":()V
+4: aload_0
+5: bipush 20
+7: putfield #2 // Field a:I
+ <-- 写屏障
+10: retu
+```
+
+发现 final 变量的赋值也会通过 **putfield** 指令来完成，同样在这条指令之后也会加入`写屏障`，**保证在其它线程读到它的值时不会出现为 0 的情况。**
+
+* 写屏障保证该屏障之前的，对共享变量的改动都会同步到主存中。
+* 写屏障会确保指令重排序时，不会将写屏障之前的代码排在写屏障之后
+
+## 0x21. 享元模式
+
+享元模式简单理解就是重用数量有限的同一对象，比如字符串常量池，包装类常量池，线程池以及字符串连接池都运用了享元模式的思想。
+
+## 0x22. 线程池
+
+### 线程池的好处
+
+1. 降低资源消耗。通过重复利用已创建的线程来降低线程创建和销毁所带来的消耗。
+2. 提高响应速度。当任务到达时，如果有空闲线程，任务可以不需要等到线程创建就直接运行。
+   1. 提高线程的客观理性。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一的分配，调优和监控。
+
+### 线程池状态
+
+- ThreadPoolExecutor 使用 int 的高 3 位来表示线程池状态，低 29 位表示线程数量。使用一个AtomicInteger来表示状态和数量，**可以通过一次CAS同时更改两个属性的值**。
+
+|  状态名称  | 高3位的值 |                        描述                         |
+| :--------: | :-------: | :-------------------------------------------------: |
+|  RUNNING   |    111    |        接收新任务，同时处理任务队列中的任务         |
+|  SHUTDOWN  |    000    |       不接受新任务，但是处理任务队列中的任务        |
+|    STOP    |    001    |    中断正在执行的任务，同时抛弃阻塞队列中的任务     |
+|  TIDYING   |    010    | 任务执行完毕，活动线程为0时，即将进入TERMINATED状态 |
+| TERMINATED |    011    |                      终结状态                       |
+
+### ThreadPoolExecutor参数
+
+```java
+public ThreadPoolExecutor(int corePoolSize,
+                          int maximumPoolSize,
+                          long keepAliveTime,
+                          TimeUnit unit,
+                          BlockingQueue<Runnable> workQueue,
+                          ThreadFactory threadFactory,
+                          RejectedExecutionHandler handler)
+
+```
+
+* corePoolSize：核心线程数
+* maximumPoolSize：最大线程数
+  * maximumPoolSize - corePoolSize = 救急线程数
+  * **救急线程在没有空闲核心线程和任务队列满了的情况下才会创建使用**
+* keepAliveTime：救急线程空闲时的最大空闲时间
+* unit：时间单位，针对救急线程
+* workQueue：阻塞队列
+  * 有界阻塞队列：ArrayBlockingQueue
+  * 无界阻塞队列：LinkedBlockingQueue
+  * 最多只有一个任务的阻塞队列：SynchronizedQueue
+  * 优先队列：PriorityBlockingQueue
+* ThreadFactory：线程工厂（给线程取名字）
+* handler：拒绝策略（当活动线程数==最大线程数且阻塞队列满的情况下采取的策略）
+
+![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/20210202214622633.png)
+
+
+
+### 拒绝策略
+
+> 当活动线程数等于最大线程数且阻塞队列满的情况下采取的策略
+
+JDK提供了四种实现
+
+1. **AbortPolicy终止策略**：丢弃该任务并抛出RejectedExecutionException异常。**这是默认策略**
+2. **DiscardPolicy丢弃策略**：丢弃任务，但是不抛出异常。如果任务队列已满，则后续提交的任务都会被丢弃，且是静默丢弃。
+3. **DiscardOldestPolicy弃老策略**：丢弃队列最前面的任务，然后重新提交被拒绝的任务
+4. **CallerRunsPolicy调用者运行策略**：由调用者线程自行处理该任务
+
+### Executors创建的线程池
+
+> 由`Executors类`提供的工厂方法来创建线程池！`Executors` 是Executor 框架的工具类
+>
+> 一般不适用，而是直接使用ThreadPoolExecutor构造方法
+
+
+
+`newFixedThreadPool`
+
+```java
+public static ExecutorService newFixedThreadPool(int nThreads, ThreadFactory threadFactory) {
+    return new ThreadPoolExecutor(nThreads, nThreads,
+                                  0L, TimeUnit.MILLISECONDS,
+                                  new LinkedBlockingQueue<Runnable>(),
+                                  threadFactory);
+}
+```
+
+**特点**
+
+1. 核心线程数 == 最大线程数（没有救急线程被创建），因此也无需超时时间
+2. `阻塞队列是无界的，可以放任意数量的任务`
+3. **适用于任务量已知，相对耗时的任务**
+
+
+
+`newCachedThreadPool`
+
+```java
+public static ExecutorService newCachedThreadPool() {
+    return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                                  60L, TimeUnit.SECONDS,
+                                  new SynchronousQueue<Runnable>());
+}
+```
+
+特点
+
+* 没有核心线程，最大线程数为Integer.MAX_VALUE，所有创建的线程都是救急线程 (可以无限创建)，空闲时生存时间为60秒
+* 阻塞队列使用的是SynchronousQueue
+  * SynchronousQueue是一种特殊的队列
+    * 没有容量，没有线程来取是放不进去的
+    * 只有当线程取任务时，才会将任务放入该阻塞队列中
+* 整个线程池表现为线程数会根据任务量不断增长，没有上限，当任务执行完毕，空闲 1分钟后释放线程。 适合任务数比较密集，但每个任务执行时间较短的情况
+
+
+
+`newSingleThreadExecutor`
+
+```java
+public static ExecutorService newSingleThreadExecutor() {
+    return new FinalizableDelegatedExecutorService
+        (new ThreadPoolExecutor(1, 1,
+                                0L, TimeUnit.MILLISECONDS,
+                                new LinkedBlockingQueue<Runnable>()));
+}
+```
+
+使用场景：
+
+1. 希望多个任务排队执行。线程数固定为 1，任务数多于 1 时，会放入无界队列排队。 任务执行完毕，这唯一的线程也不会被释放。
+2. 区别：
+   1. 和自己创建单线程执行任务的区别：自己创建一个单线程串行执行任务，如果任务执行失败而终止那么没有任何补救措施，而`newSingleThreadExecutor`线程池还会新建一个线程，保证池的正常工作
+   2. `Executors.newSingleThreadExecutor()` 线程个数始终为1，不能修改
+      1. FinalizableDelegatedExecutorService 应用的是装饰器模式，只对外暴露了 `ExecutorService `接口，因此不能调用 `ThreadPoolExecutor `中特有的方法
+3. 和`Executors.newFixedThreadPool(1)` 初始时为1时的区别：`Executors.newFixedThreadPool(1)` 初始时为1，以后还可以修改，对外暴露的是 ThreadPoolExecutor 对象，可以强转后调用 setCorePoolSize 等方法进行修改
+         
+
+### 执行 execute()方法和 submit()方法的区别是什么呢？
+
+> 就像runnable()和callable()的区别，submit()有返回值返回一个Future的对象。
+
+### 线程池创建多少线程合适
+
+> 下面两点只是纯理论说法，具体个数要是需要压力测试得到
+
+1. CPU密集型
+
+   通常采用 **`cpu 核数 + 1`** 能够实现最优的 CPU 利用率，+1 是保证当线程由于页缺失故障（操作系统）或其它原因导致暂停时，额外的这个线程就能顶上去，保证 CPU 时钟周期不被浪费
+
+2. IO密集型
+
+   CPU 不总是处于繁忙状态，例如，当你执行业务计算时，这时候会使用 CPU 资源，但当你执行 I/O 操作时、远程RPC 调用时，包括进行数据库操作时，这时候 CPU 就闲下来了，你可以利用多线程提高它的利用率。通过CPU的利用率计算得到。
+
+
+
+
 
