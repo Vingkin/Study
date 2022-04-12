@@ -1016,8 +1016,7 @@ public static ExecutorService newCachedThreadPool() {
     * 没有容量，没有线程来取是放不进去的
     * 只有当线程取任务时，才会将任务放入该阻塞队列中
 * 整个线程池表现为线程数会根据任务量不断增长，没有上限，当任务执行完毕，空闲 1分钟后释放线程。 适合任务数比较密集，但每个任务执行时间较短的情况
-
-
+* 
 
 `newSingleThreadExecutor`
 
@@ -1038,7 +1037,6 @@ public static ExecutorService newSingleThreadExecutor() {
    2. `Executors.newSingleThreadExecutor()` 线程个数始终为1，不能修改
       1. FinalizableDelegatedExecutorService 应用的是装饰器模式，只对外暴露了 `ExecutorService `接口，因此不能调用 `ThreadPoolExecutor `中特有的方法
 3. 和`Executors.newFixedThreadPool(1)` 初始时为1时的区别：`Executors.newFixedThreadPool(1)` 初始时为1，以后还可以修改，对外暴露的是 ThreadPoolExecutor 对象，可以强转后调用 setCorePoolSize 等方法进行修改
-         
 
 ### 执行 execute()方法和 submit()方法的区别是什么呢？
 
@@ -1046,7 +1044,7 @@ public static ExecutorService newSingleThreadExecutor() {
 
 ### 线程池创建多少线程合适
 
-> 下面两点只是纯理论说法，具体个数要是需要压力测试得到
+> 下面两点只是纯理论说法，具体个数要是需要测试得到
 
 1. CPU密集型
 
@@ -1055,8 +1053,5 @@ public static ExecutorService newSingleThreadExecutor() {
 2. IO密集型
 
    CPU 不总是处于繁忙状态，例如，当你执行业务计算时，这时候会使用 CPU 资源，但当你执行 I/O 操作时、远程RPC 调用时，包括进行数据库操作时，这时候 CPU 就闲下来了，你可以利用多线程提高它的利用率。通过CPU的利用率计算得到。
-
-
-
 
 
