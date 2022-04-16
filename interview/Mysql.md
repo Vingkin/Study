@@ -123,7 +123,7 @@ and address like '%北京市%'
 
 上述添加了一个联合索引。select语句只有zipcode命中了联合索引，lastname因为%开头并不能命中，但是因为联合索引中有lastname，所以会先在联合索引中通过lastname进行过滤，然后再进行回表操作。这就是索引下推。
 
-## 0x0B. EXISTS和IN的区分
+## 0x0B. EXISTS和IN的区分 
 
 如何选择需要看表的大小。`小表驱动大表`。
 
