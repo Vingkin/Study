@@ -172,3 +172,6 @@ Exception分为运行时异常和非运行时异常。
 
 在`@Transactional`注解中如果不配置`rollbackFor`属性，那么事务只会在遇到`RuntimeException`的时候才会回滚，加上`rollbackFor=Exception.class`，可以让事务在遇到非运行时异常时也会回滚。
 
+## 0x11. Spring是怎么解决循环依赖的
+
+TODO
