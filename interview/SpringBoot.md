@@ -38,6 +38,8 @@ Spring Boot提供众多起步依赖（Starter）降低项目依赖的复杂度�
 
 通过Spring Boot Starter导入包。其他详见0x01.
 
+[](#0x01. Spring Boot Starter有什么用)
+
 ## 0x04. Spring Boot自动装配过程
 
 使用Spring Boot时，我们只需引入对应的Starter，Spring Boot启动时便会自动加载相关依赖，配置相应的初始化参数，以最快捷、简单的形式对第三方软件进行集成，这便是Spring Boot的自动配置功能。
