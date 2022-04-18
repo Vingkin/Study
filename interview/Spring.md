@@ -43,10 +43,12 @@ Spring的核心是IoC和AOP
 
 Spring主要提供了两种类型的容器：BeanFactory和ApplicationContext
 
-* `BeanFactory`：是基础类型的IoC容器，提供完整的IoC服务支持。如果没有特殊指定，默认采用延迟初始化策略。只有当客户端对象需要访问容器中的某个对象时，该对象才会进行初始化以及依赖注入的操作。所以，相对来说，容器启动初期速度较快，所需要的资源有限。对于资源有限，并且功能要求不是很严格的场景，BeanFactory是比较合适的IoC容器选择。
-* `ApplicationContext`：他是在BeanFactory的基础上构建的，拥有BeanFactory的所有支持。除此之外，还支持比如事件发布、国际化信息支持等。ApplicationContext所管理的对象，在该类型容器启动之后，默认全部初始化并进行依赖注入。所以，对于BeanFactory而言，ApplicationContext要求更多的系统资源。同时，因为在启动时就完成所有初始化，容器启动的时间较BeanFactory也会长一些。在那些系统资源充足，并且要求更多功能的场景中，ApplicationContext类型的容器是比较合适的选择。
+* `BeanFactory`：是基础类型的IoC容器，是IoC的顶层接口，提供完整的IoC服务支持。如果没有特殊指定，默认采用延迟初始化策略。只有当客户端对象需要访问容器中的某个对象时，该对象才会进行初始化以及依赖注入的操作。所以，相对来说，容器启动初期速度较快，所需要的资源有限。对于资源有限，并且功能要求不是很严格的场景，BeanFactory是比较合适的IoC容器选择。
+* `ApplicationContext`：他是在BeanFactory的基础上构建的，是`BeanFactory`的子接口，拥有BeanFactory的所有支持。除此之外，还支持比如事件发布、国际化信息支持（继承了`MessageSource`）等。ApplicationContext所管理的对象，在该类型容器启动之后，默认全部初始化并进行依赖注入。所以，对于BeanFactory而言，ApplicationContext要求更多的系统资源。同时，因为在启动时就完成所有初始化，容器启动的时间较BeanFactory也会长一些。在那些系统资源充足，并且要求更多功能的场景中，ApplicationContext类型的容器是比较合适的选择。
 
 ## 0x03. 说一说对BeanFactory的了解
+
+其实就是说上面的，包括`ApplicationContext`
 
 BeanFactory是一个类工厂，与传统类工厂不同的是，BeanFactory是类的通用工厂，可以创建并管理各种类的对象。这些被创建和管理的对象叫做Bean。
 
@@ -97,6 +99,8 @@ Spring通过IoC来管理Bean，我们可以通过XML配置或者注解来进行�
 2. 我们可以自定义销毁方法，并在该方法前增加`@PreDestory`注解，Bean将在自身销毁前调用这个方法
 
 ## 0x07. 单例Bean的线程安全问题了解吗
+
+> 要是问Bean的线程安全问题需要考虑单例Bean还是多例Bean，多例Bean不存在线程安全问题
 
 单例Bean存在线程安全问题，主要是因为当多个线程操作同一个对象的时候存在共享资源竞争的问题。
 
