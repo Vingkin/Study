@@ -17,7 +17,7 @@ Spring Boot提供众多起步依赖（Starter）降低项目依赖的复杂度�
 
 举例来说，你打算做个Web应用程序。与其向项目的构建文件里添加一堆单独的库依赖，还不如声明这是一个Web应用程序来的简单。你只要添加Spring Boot的Web起步依赖就好了。
 
-# 0x02. 介绍Spring Boot的启动流程
+## 0x02. 介绍Spring Boot的启动流程
 
 首先，Spring Boot项目创建完成会默认生成一个名为\*Application的入口类，我们是通过该类的main方法启动Spring Boot项目的。在main方法中，通过run方法进行\*Application类的初始化和启动。
 
@@ -87,3 +87,168 @@ public @interface EnableAutoConfiguration {
 * `@ConditionalOnBean`：在容器中有指定Bean的时候才会加载
 * `@ConditiaonOnMissingBean`：在容器中没有指定Bean的时候才会加载
 * 等等
+
+**@RestController**
+
+`@RestController`是`@Controller`和`@ResponseBody`的合集，表示这是个控制器Bean，并且是将函数的返回值直接填入HTTP响应体中，返回JSON或XML形式数据，是REST风格的控制器。
+
+**@Configuration**
+
+一般用来声明配置类，可以用`@Component`注解替代，不过使用`@Configuration`注解声明配置类更加语义化。
+
+**@PathVariable和@RequestParam**
+
+* `@PathVariable`：用于获取路径参数
+* `@RequestParam`：用于获取查询参数
+
+```java
+@GetMapping("/klasses/{klassId}/teachers")
+public List<Teacher> getKlassRelatedTeachers(
+         @PathVariable("klassId") Long klassId,
+         @RequestParam(value = "type", required = false) String type ) {
+...
+}
+```
+
+如果我们请求的url是：`/klasses/123456/teachers?type=web`
+
+那么我们服务获取到的数据就是：`klassId=123456,type=web`
+
+**@RequestBody**
+
+用于读取Request请求的body部分，并且`Content-Type`为`application/json`格式的数据，接收到数据之后会自动将数据绑定到Java对象上去。系统会使用`HttpMessageConverter`或者自定义的`HttpMessageConverter`将请求的body中的json字符串转换成java对象。
+
+我们有个注册的接口：
+
+```java
+@PostMapping("/sign-up")
+public ResponseEntity signUp(@RequestBody @Valid UserRegisterRequest userRegisterRequest) {
+  userService.save(userRegisterRequest);
+  return ResponseEntity.ok().build();
+}
+```
+
+**UserRegisterRequest对象**
+
+```java
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserRegisterRequest {
+    @NotBlank
+    private String userName;
+    @NotBlank
+    private String password;
+    @NotBlank
+    private String fullName;
+}
+```
+
+我们发送post请求到这个接口，并且body携带JSON数据。这样我们的后端就可以直接把JSON格式的数据映射到我们的`UserRegisterRequest`类上。
+
+```json
+{"userName":"coder","fullName":"shuangkou","password":"123456"}
+```
+
+需要注意的是：**一个请求方法只可以有一个`@RequestBody`，但是可以有多个`@RequestParam`和`@PathVariable`**。 如果你的方法必须要用两个 `@RequestBody`来接受数据的话，大概率是你的数据库设计或者系统设计出问题了！
+
+**@Value**和**@ConfigurationProperties**
+
+```yaml
+wuhan2020: 2020年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！
+
+my-profile:
+  name: Guide哥
+  email: koushuangbwcx@163.com
+
+library:
+  location: 湖北武汉加油中国加油
+  books:
+    - name: 天才基本法
+      description: 二十二岁的林朝夕在父亲确诊阿尔茨海默病这天，得知自己暗恋多年的校园男神裴之即将出国深造的消息——对方考取的学校，恰是父亲当年为她放弃的那所。
+    - name: 时间的秩序
+      description: 为什么我们记得过去，而非未来？时间“流逝”意味着什么？是我们存在于时间之内，还是时间存在于我们之中？卡洛·罗韦利用诗意的文字，邀请我们思考这一亘古难题——时间的本质。
+    - name: 了不起的我
+      description: 如何养成一个新习惯？如何让心智变得更成熟？如何拥有高质量的关系？ 如何走出人生的艰难时刻？
+```
+
+使用`@Value("${property}")`读取比较简单的配置信息
+
+```java
+@Value("${wuhan2020}")
+String wuhan2020;
+```
+
+通过`@ConfigurationProperties`读取配置信息并于Bean绑定，就可以像使用普通的Bean一样，将其注入到类中使用
+
+```java
+@Component
+@ConfigurationProperties(prefix = "library")
+@Data
+@ToString
+public class LibraryProperties {
+
+    private String location;
+    private List<Book> books;
+
+    @Setter
+    @Getter
+    @ToString
+    static class Book {
+        String name;
+        String description;
+    }
+}
+```
+
+```java
+@Autowired
+private LibraryProperties libraryProperties;
+```
+
+## 0x06. Spring Boot全局异常处理器
+
+@ControllerAdvice开启全局异常处理，使用该注解表示开启了全局异常的捕获，我们只需再自定义一个方法使用@ExceptionHandler注解，然后自定义捕获异常类型即可对这些捕获的异常进行统一处理。
+
+```java
+// 全局异常处理器
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(value = Exception.class)
+    @ResponseBody
+    public String globalExceptionHandler(Exception e) {
+        System.out.println("全局异常捕获>>>:" + e);
+        return "全局异常捕获,错误原因>>>" + e.getMessage();
+    }
+
+}
+```
+
+```java
+// controller中进行测试
+@PostMapping("/sign-up")
+public ResponseEntity signUp(@RequestBody UserRegisterRequest userRegisterRequest) {
+    testService.save(userRegisterRequest);
+    int i = 1 / 0;
+    return ResponseEntity.ok(userRegisterRequest);
+}
+```
+
+结果：
+
+```java
+全局异常捕获,错误原因>>>/ by zero
+```
+
+## 0x07. Spring Boot实现登录拦截器
+
+> 可以拓展一下SSO单点登录来讲项目
+>
+> [Session的工作原理和使用经验 - Ken的杂谈](https://ken.io/note/session-principle-skill)
+>
+> [SSO 单点登录 | JavaGuide](https://javaguide.cn/system-design/security/sso-intro.html)
+
+[SpringBoot实现登录拦截器（实战版） - 掘金 (juejin.cn)](https://juejin.cn/post/6975413007715139621)
+
+## 

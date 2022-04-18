@@ -172,6 +172,13 @@ Exception分为运行时异常和非运行时异常。
 
 在`@Transactional`注解中如果不配置`rollbackFor`属性，那么事务只会在遇到`RuntimeException`的时候才会回滚，加上`rollbackFor=Exception.class`，可以让事务在遇到非运行时异常时也会回滚。
 
-## 0x11. Spring是怎么解决循环依赖的
+## 0x11. @Transactional失效场景
+
+1. `@Transaction`应用再非public修饰的方法上
+2. `@Transaction`注解属性`propagation`设置错误，上面写的传播行为后三个会使之失效
+3. `@Transactional`注解属性`rollbackFor`设置错误
+4. 数据库引擎不支持事务，只有InnoDB支持事务
+
+## 0x12. Spring是怎么解决循环依赖的
 
 TODO
