@@ -9,12 +9,27 @@ DAO层是Data Access Object的缩写，即数据访问对象，在项目中它�
 ## 0x02. 介绍一下Spring MVC的执行流程
 
 1. 整个过程开始于客户端发出一个HTTP请求，Web应用服务器接受到这个请求。如果匹配`DispatcherServlet`的请求路径，则Web容器将该请求转交给`DispatcherServlet`处理。
-2. `DispatcherServlet`接收到这个请求后，将根据请求的信息（包括URL、HTTP方法、请求报文头、请求参数、Cookie等）及`HandlerMapping`的配置找到处理请求的处理器（Handler）。可将`HandlerMapping`看作路由控制器，将`Handler`看作目标主机。
+2. `DispatcherServlet`接收到这个请求后，将根据请求的信息（包括URL、HTTP方法、请求报文头、请求参数、Cookie等）及`HandlerMapping`的配置找到处理请求的处理器（`Handler`）。可将`HandlerMapping`看作路由控制器，将`Handler`看作目标主机。
 3. 当`DispatcherServlet`根据`HandlerMapping`得到对应请求的`Handler`后，通过`HandlerAdapter`对`Handler`进行封装，再以统一的适配器接口调用`Handler`。`HandlerAdapter`是Spring MVC框架的接口，顾名思义，`HandlerAdapter`是一个适配器，它用统一的接口对各种Handler方法进行调用。
 4. 处理器完成业务逻辑的处理后，将返回一个`ModelAndView`给`DispatcherServlet`，`ModelAndView`包含了视图逻辑名和模型数据信息。
 5. `ModelAndView`中包含的是“逻辑视图名”而非真正的视图对象，`DispatcherServlet`借由`ViewResolver`完成逻辑视图名到真实视图对象的解析工作。
 6. 当得到真实的视图对象View后，`DispatcherServlet`就用这个View对象对`ModelAndView`中的模型数据进行视图渲染。
 7. 最终客户端得到的响应消息可能是有一个普通的HTML页面，也可能是一个XML或JSON串，甚至是一张图片或一个PDF文档等不同的媒体形式。
+
+**简略版本：**
+
+1. 用户发送请求至前端控制器`DispatcherServlet`
+2. `DispatcherServlet`收到请求调用`HandllerMapping`处理器映射器
+3. 处理器映射器找到具体的处理器（`Handler`）（可以根据xml配置，注解进行查找），生成处理器对象以及处理器拦截器（如果有拦截器则生成）一并返回给`DispatcherServlet`
+4. `DispatcherServlet`调用`HandlerAdapter`处理器适配器
+5. `HandlerAdapter`经过适配调用具体的处理器（`Controller`，也叫后端控制器）
+6. `Controller`执行完成后返回`ModelAndView`
+7. `HandlerAdapter`将`Controller`执行结果`ModelAndView`返回给`DispatcherServlet`
+8. `DispatcherServlet`将`ModelAndView`传给`ViewReslover`视图解析器
+9. `ViewReslover`解析后返回具体`View`
+10. `DispatcherServlet`根据`View`进行渲染视图。（最终客户端得到的响应消息可能是有一个普通的HTML页面，也可能是一个XML或JSON串，甚至是一张图片或一个PDF文档等不同的媒体形式。）
+
+![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/SpringMVC%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B.png)
 
 ## 0x03. 说一说你知道的Spring MVC注解
 
@@ -57,11 +72,19 @@ public List<Teacher> getKlassRelatedTeachers(
 
 ## 0x04. 介绍一下Sprig MVC的拦截器
 
+> 可以拓展一下SSO单点登录来讲项目
+>
+> [Session的工作原理和使用经验 - Ken的杂谈](https://ken.io/note/session-principle-skill)
+>
+> [SSO 单点登录 | JavaGuide](https://javaguide.cn/system-design/security/sso-intro.html)
+>
+> [SpringBoot实现登录拦截器（实战版） - 掘金 (juejin.cn)](https://juejin.cn/post/6975413007715139621)
+
 拦截器会对处理器进行拦截，这样通过拦截器就可以增强处理器的功能。Spring MVC中，所有的拦截器都需要实现HandlerInterceptor接口，该接口中包含如下三个方法：`preHandle()`,`postHandle()`,`afterCompletion()`。
 
 这些方法的执行流程如下图：
 
-
+![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/31C010B3F63CB1CC1ADC5481E9E77BDB.png)
 
 通过上图可以看出，Spring MVC拦截器的执行流程如下：
 
@@ -75,3 +98,4 @@ Spring MVC拦截器的开发步骤如下：
 
 1. **开发拦截器**：实现`HandlerInterceptor`接口，从三个方法中选择合适的方法，实现拦截时需要执行的具体业务逻辑，一般使用`preHandle`方法。
 2. **注册拦截器**：定义配置类，并让它实现`WebMvcConfigurer`接口，在接口的`addInterceptors`方法中，注册拦截器，并定义该拦截器匹配那些请求路径。
+

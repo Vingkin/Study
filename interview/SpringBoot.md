@@ -240,15 +240,3 @@ public ResponseEntity signUp(@RequestBody UserRegisterRequest userRegisterReques
 ```java
 全局异常捕获,错误原因>>>/ by zero
 ```
-
-## 0x07. Spring Boot实现登录拦截器
-
-> 可以拓展一下SSO单点登录来讲项目
->
-> [Session的工作原理和使用经验 - Ken的杂谈](https://ken.io/note/session-principle-skill)
->
-> [SSO 单点登录 | JavaGuide](https://javaguide.cn/system-design/security/sso-intro.html)
-
-[SpringBoot实现登录拦截器（实战版） - 掘金 (juejin.cn)](https://juejin.cn/post/6975413007715139621)
-
-## 
