@@ -152,7 +152,7 @@ public class UserRegisterRequest {
 
 需要注意的是：**一个请求方法只可以有一个`@RequestBody`，但是可以有多个`@RequestParam`和`@PathVariable`**。 如果你的方法必须要用两个 `@RequestBody`来接受数据的话，大概率是你的数据库设计或者系统设计出问题了！
 
-**@Value**和**@ConfigurationProperties**
+**@Value和@ConfigurationProperties**
 
 ```yaml
 wuhan2020: 2020年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！
@@ -208,7 +208,7 @@ private LibraryProperties libraryProperties;
 
 ## 0x06. Spring Boot全局异常处理器
 
-@ControllerAdvice开启全局异常处理，使用该注解表示开启了全局异常的捕获，我们只需再自定义一个方法使用@ExceptionHandler注解，然后自定义捕获异常类型即可对这些捕获的异常进行统一处理。
+`@ControllerAdvice`开启全局异常处理，使用该注解表示开启了全局异常的捕获，我们只需再自定义一个方法使用`@ExceptionHandler`注解，然后自定义捕获异常类型即可对这些捕获的异常进行统一处理。
 
 ```java
 // 全局异常处理器

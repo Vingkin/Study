@@ -64,11 +64,11 @@ Spring通过IoC来管理Bean，我们可以通过XML配置或者注解来进行�
 2. `@Component`，`@Repository`，`@Service`，`@Controller`用于类上声明Bean，他们的作用一样，只是语义不同。`@Component`用于声明通用的Bean，`@Repository`用于声明DAO层的Bean，`@Service`用于声明业务层的Bean，`@Controller`用于声明视图层的控制器Bean，被这些注解声明的类当被扫描到时就会创建对应的Bean
 3. `@Autowired`，`@Qualifier`，`@Resource`，`@Value`用于注入Bean。`@Autowired`用于按类型注入，`@Qualifier`指定Bean名称注入需要与`@Autowired`一起使用，`@Resource`既可以按类型注入也可以指定Bean名称注入，@Value适用于注入基本类型。
 4. `@Scope`用于声明Bean的作用域。
-5. `@PostConstruct`，`@PreDestory`用于声明Bean的生命周期。其中被`@PostConstruct`修饰的发给发将在Bean 实例化后被调用，`@PreDestory`修饰的方法将在容器销毁前调用。
+5. `@PostConstruct`，`@PreDestory`用于声明Bean的生命周期。其中被`@PostConstruct`修饰的发给发将在Bean实例化后被调用，`@PreDestory`修饰的方法将在容器销毁前调用。
 
 ## 0x05. Bean的作用域
 
-默认情况下，Bean在Spring容器中时单例的，可以通过@Scope注解修改Bean的作用域。
+默认情况下，Bean在Spring容器中是单例的，可以通过@Scope注解修改Bean的作用域。
 
 | 类型          | 说明                                                         |
 | ------------- | ------------------------------------------------------------ |
@@ -84,11 +84,11 @@ Spring通过IoC来管理Bean，我们可以通过XML配置或者注解来进行�
 
 1. 解析类得到`BeanDefinition`
 2. 通过构造方法实例化得到一个对象（如果有多个构造方法，则要推断使用）
-3. 对加了`@Autowired`或者相关注解的对象进行依赖注入
+3. 对加了`@Autowired`或者相关注解对对象进行依赖注入
 4. 回调`Aware`接口的方法，比如`BeanNameAware`中`setBeanName()`方法，`BeanFactoryAware`中`setBeanFactory()`方法。
 5. 调用`BeanPostProcessor`的初始化前的方法
 6. 调用初始化方法
-7. 调用`BeanPostProcessor`的初始化后的方法，这这会进行AOP
+7. 调用`BeanPostProcessor`的初始化后的方法，这会进行AOP
 8. 如果当前创建的Bean是单例的则会放入单例池
 9. 使用Bean
 10. Spring容器关闭时调用`DisposableBean`中的`destory()`方法
@@ -114,7 +114,7 @@ Spring通过IoC来管理Bean，我们可以通过XML配置或者注解来进行�
 ## 0x08. @Component和@Bean的区别是什么？
 
 1. `@Component`注解作用于类，通常是通过类路径扫描（`@ComponentScan`）自动侦测以及自动装配到Spring容器中。而@Bean注解作用于方法，将当前方法的返回值存入IOC容器。
-2. `@Bean`注解比`@Component`注解的自定义性更强，而且很多地方我们只能通过`@Bean`注解来注册Bean。比如当我们引用第三方库中的类需要装配到Spring容器中是，只能通过`@Bean`来实现。
+2. `@Bean`注解比`@Component`注解的自定义性更强，而且很多地方我们只能通过`@Bean`注解来注册Bean。比如当我们引用第三方库中的类需要装配到Spring容器中时，只能通过`@Bean`来实现。
 
 ## 0x09. Spring AOP和AspectJ AOP的区别？
 
@@ -149,9 +149,9 @@ Spring在`TransactionDefinition`接口中规定了其中类型的事务传播行
 
 | 事务传播类型              | 说明                                                         |
 | ------------------------- | ------------------------------------------------------------ |
-| PROPATATION_REQUIRED      | 如果当前没有事务，则新建一个事务；如果已存在一个事务，在加入到这个事务中。这时最常见的选择，也是`@Transactional`的默认选项。 |
-| PROPATATION_REQUIRED_NEW  | 创建一个新的事务，如果当前存在事务，则把当前事务挂起。也就是说不管外部方法是否开启事务，REQUIRES_NEW修饰的内部方法都会开启自己的新事务，且开启的事务互相独立，互不干扰。 |
-| PROPAGATION_NESTED        | 如果当前存在事务，则创建一个事务作为当前事务的嵌套事务来运行，如果当前没有事务，则等价于PROPAGATION_REQUIRED |
+| PROPAGATION_REQUIRED      | 如果当前没有事务，则新建一个事务；如果已存在一个事务，在加入到这个事务中。这时最常见的选择，也是`@Transactional`的默认选项。 |
+| PROPAGATION_REQUIRED_NEW  | 创建一个新的事务，如果当前存在事务，则把当前事务挂起。也就是说不管外部方法是否开启事务，REQUIRES_NEW修饰的内部方法都会开启自己的新事务，且开启的事务互相独立，互不干扰。 |
+| PROPAGATION_NESTED        | 如果当前存在事务，则创建一个事务作为当前事务的嵌套事务来运行，如果当前没有事务，则等价于PROPAGATION_REQUIRED（nested：嵌套的） |
 | PROPAGATION_MANDATORY     | 如果当前存在事务，则加入该事务；如果不存在则抛出异常。（mandatory：强制性） |
 | PROPAGATION_SUPPORTS      | 如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式继续运行 |
 | PROPAGATION_NOT_SUPPORTED | 以非事务方式运行，如果当前存在事务，则把当前事务挂起         |
@@ -161,7 +161,7 @@ Spring在`TransactionDefinition`接口中规定了其中类型的事务传播行
 
 ## 0x0F. Spring的事务如何配置，常用注解有那些？
 
-事物的打开、回滚和提交是由**事务管理器**来完成的，我们使用不同的数据库访问框架，就要使用与之对应的**事务管理器**。在Spring Boot中，当你添加了数据库访问框架的起步依赖时，他就会进行自动配置，即自动实例化正确的事务管理器。
+事务的打开、回滚和提交是由**事务管理器**来完成的，我们使用不同的数据库访问框架，就要使用与之对应的**事务管理器**。在Spring Boot中，当你添加了数据库访问框架的起步依赖时，他就会进行自动配置，即自动实例化正确的事务管理器。
 
 对于声明式事务，是使用`@Transactional`进行标注的。这个注解可以标注在类或者方法上。
 
