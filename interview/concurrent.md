@@ -675,7 +675,7 @@ volatile的底层实现原理是内存屏障
 1. 保证可见性
    * 对volatile变量的写指令后会加入写屏障。写屏障保证该屏障之前的，对共享变量的改动都会同步到主存中。
    * 对volatile变量之间会加入读屏障。读屏障保证在该屏障之后，对共享变量的读取，加载的是主存中最新数据。
-2. 保证有序性
+2. 保证有序性（禁止指令重排）
    * 写屏障会确保指令重排序时，不会将写屏障之前的代码排在写屏障之后
    * 读屏障会确保指令重排序时，不会将读屏障之后的代码排在读屏障之前
 
@@ -1054,4 +1054,8 @@ public static ExecutorService newSingleThreadExecutor() {
 
    CPU 不总是处于繁忙状态，例如，当你执行业务计算时，这时候会使用 CPU 资源，但当你执行 I/O 操作时、远程RPC 调用时，包括进行数据库操作时，这时候 CPU 就闲下来了，你可以利用多线程提高它的利用率。通过CPU的利用率计算得到。
 
+## 0x23. ThreadLocal
 
+1. ThreadLocal是Java所提供的线程本地存储机制，可以利用该机制将数据**缓存在某个线程内部**，该线程可以在任何时刻，任意方法中获取缓存的数据
+2. ThreadLocal底层是通过ThreadLocalMap来实现的，每个Thread对象（注意不是ThreadLocal对象）中都存在一个ThreadLocalMap，Map的key为ThreadLocal对象，Map的value为需要缓存的值
+3. 如果在线程池中使用ThreadLocal会造成内存泄漏，因为当ThreadLocal对象使用完之后，应该要把设置的key，value也就是Entry对象进行回收，但线程池中的线程不会回收，而线程对象是通过强引用指向ThreadLocalMap，ThreadLocalMap也是通过强引用指向Entry对象，线程不被回收，Entry对象就不会被回收，从而出现内存泄漏，解决办法是，当使用了ThreadLocal对象之后，手动调用ThreadLocal的remove方法，手动清除Entry对象。
