@@ -1059,3 +1059,48 @@ public static ExecutorService newSingleThreadExecutor() {
 1. ThreadLocal是Java所提供的线程本地存储机制，可以利用该机制将数据**缓存在某个线程内部**，该线程可以在任何时刻，任意方法中获取缓存的数据
 2. ThreadLocal底层是通过ThreadLocalMap来实现的，每个Thread对象（注意不是ThreadLocal对象）中都存在一个ThreadLocalMap，Map的key为ThreadLocal对象，Map的value为需要缓存的值
 3. 如果在线程池中使用ThreadLocal会造成内存泄漏，因为当ThreadLocal对象使用完之后，应该要把设置的key，value也就是Entry对象进行回收，但线程池中的线程不会回收，而线程对象是通过强引用指向ThreadLocalMap，ThreadLocalMap也是通过强引用指向Entry对象，线程不被回收，Entry对象就不会被回收，从而出现内存泄漏，解决办法是，当使用了ThreadLocal对象之后，手动调用ThreadLocal的remove方法，手动清除Entry对象。
+
+## 0x24. CopyOnWriteArrayList
+
+CopyOnWriteArrayList是java.util.concurrent包提供的方法，它实现了读操作无锁，写操作则通过操作操作底层数组的新副本来实现（将之前的ArrayList拷贝一份，写操作在该副本上进行，在完成写之前，需要对写加锁，写操作完成后，将有来的引用指向新副本），是一种读写分离的并发策略。
+
+CopyOnWrite并发容器适用于对于绝大部分访问都是读，且知识偶尔写的并发场景。
+
+## 0x25. ConcurrentHashMap
+
+重要属性和内部类
+
+```java
+// 默认为0
+// 当初始化时，为-1
+// 当扩容是，为-(1 + 扩容线程数)
+// 当初始化或扩容完成后，为下一次扩容的阈值大小
+private transient volatile in sizeCtl;
+
+// 整个ConcurrentHashMap就是一个Node[]
+static class Node<K, V> implements Map.Entry<K, V> {}
+
+// hash表
+transient volatile Node<K, V>[] table;
+
+// 扩容时 新的 hash表
+private transient volatile Node<K, V>[] nextTable;
+
+// 扩容时如果某个bin迁移完毕，用FordwardingNode作为旧table bin的头节点
+static final class ForwardingNode<K, V> extends Node<K, V> {}
+
+// 用在compute以及computeIfAbsent时，用来占位，计算完成后替换为普通Node
+static final class ReservationNode<K, V> extends Node<K, V> {}
+
+// 作为treebin（红黑树）的头节点，存储root和first
+static final class TreeBin<K, V> extends Node<K, V> {}
+
+// 作为treebin的节点，存储parent，left，right
+static final class TreeNode<K, V> extends Node<K, V> {}
+```
+
+> `ForwardingNode`的理解
+>
+> ForwardingNode出现在扩容时，下图是旧的hash表，从右向左迁移bin，该节点迁移完成后加入ForwardingNode作为当前节点的头节点。如果在扩容过程中其他线程来get，get到了ForwardingNode，那么这个线程就回到新的链表中get。
+>
+> ![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/20220421103901.png)

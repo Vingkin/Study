@@ -88,7 +88,7 @@ public List<Teacher> getKlassRelatedTeachers(
 
 通过上图可以看出，Spring MVC拦截器的执行流程如下：
 
-* 执行preHandle方法，它会返回一个布尔值。如果为false，则结束所有流程，如果为true，则执行下一步。
+* 执行`preHandle`方法，它会返回一个布尔值。如果为false，则结束所有流程，如果为true，则执行下一步。
 * 执行处理器逻辑，它包含控制器的功能
 * 执行`postHandler`方法
 * 执行视图解析和视图渲染
