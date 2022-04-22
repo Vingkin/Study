@@ -1064,9 +1064,17 @@ public static ExecutorService newSingleThreadExecutor() {
 
 CopyOnWriteArrayList是java.util.concurrent包提供的方法，它实现了读操作无锁，写操作则通过操作操作底层数组的新副本来实现（将之前的ArrayList拷贝一份，写操作在该副本上进行，在完成写之前，需要对写加锁，写操作完成后，将有来的引用指向新副本），是一种读写分离的并发策略。
 
-CopyOnWrite并发容器适用于对于绝大部分访问都是读，且知识偶尔写的并发场景。
+CopyOnWrite并发容器适用于对于绝大部分访问都是读，且只是偶尔写的并发场景。
+
+**get弱一致性**
 
 ## 0x25. ConcurrentHashMap
+
+> 一下都是基于JDK 8
+
+对于JDK 1.7而言，ConcurrentHashMap和HashMap都是基于数组和链表实现的。不同在于ConcurrentHashMap有大数组和小数组，大数组就是Segment数组，小数组是HashEntry数组。Segment继承了ReentranceLock，因此具有可重入锁的特性，这样的话就可以保证多线程同时访问的线程安全问题。ConcurrentHashMap的线程安全是基于Segment加锁的基础上。
+
+对于JDK 1.8而言，CoucurrentHashMap和HashMap的实现方式都是一样的，都是基于Node数组+链表+红黑树。当链表长度大于8并且Node数组长度大于64的时候，链表就会转换为红黑树。它的线程安全是由CAS+volatile或者synchronized来实现的。比如在put操作中，如果链表头节点为空，则通过CAS创建链表头节点，如果链表头节点不为空则通过synchronized来加锁遍历链表。这样加锁的好处是对于链表头节点加锁，相比于对Segment加锁，锁的粒度更小，并发性能大大提升。
 
 **重要属性和内部类**
 
@@ -1245,4 +1253,15 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
     return null;
 }
 ```
+
+**size计算流程**
+
+size计算实际发生在put，remove改变集合元素的操作之中
+
+* 没有竞争发生，向baseCount累加计数
+* 有竞争发生，新建counterCells，象棋中的一个cell累加计数
+  * counterCells初始有两个cell
+  * 如果技术竞争比较激烈，会创建新的cell来累加计数
+
+## 0x26. LinkedBlockingQueue
 
