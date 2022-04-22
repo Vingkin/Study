@@ -1068,7 +1068,7 @@ CopyOnWrite并发容器适用于对于绝大部分访问都是读，且知识偶
 
 ## 0x25. ConcurrentHashMap
 
-重要属性和内部类
+**重要属性和内部类**
 
 ```java
 // 默认为0
@@ -1101,6 +1101,148 @@ static final class TreeNode<K, V> extends Node<K, V> {}
 
 > `ForwardingNode`的理解
 >
-> ForwardingNode出现在扩容时，下图是旧的hash表，从右向左迁移bin，该节点迁移完成后加入ForwardingNode作为当前节点的头节点。如果在扩容过程中其他线程来get，get到了ForwardingNode，那么这个线程就回到新的链表中get。
+> ForwardingNode出现在扩容时，下图是旧的hash表，从右向左迁移bin，该节点迁移完成后加入ForwardingNode作为当前节点的头节点。如果在扩容过程中其他线程来get，get到了ForwardingNode，那么这个线程就回到新的链表中get。如果扩容过程中，其他线程来put，put到了ForwardingNode，此时会帮忙扩容。
 >
 > ![](https://vingkin-1304361015.cos.ap-shanghai.myqcloud.com/interview/20220421103901.png)
+
+**构造器分析**
+
+实现了懒惰初始化，在构造方法中仅仅计算了table的大小，以后在第一次使用时才会真正创建。
+
+```java
+public ConcurrentHashMap(int initialCapacity, float loadFactor, int concurrencyLevel) {
+    if (!(loadFactor > 0.0f) || initialCapacity < 0 || concurrencyLevel <= 0)
+        throw new IllegalArgumentException();
+    if (initialCapacity < concurrencyLevel)   // Use at least as many bins
+        initialCapacity = concurrencyLevel;   // as estimated threads
+    long size = (long)(1.0 + (long)initialCapacity / loadFactor);
+    // tableSizeFor是为了保证计算的大小是2^n
+    int cap = (size >= (long)MAXIMUM_CAPACITY) ?
+        MAXIMUM_CAPACITY : tableSizeFor((int)size);
+    this.sizeCtl = cap;
+}
+```
+
+**get流程**
+
+> 全程没有加锁
+
+```java
+public V get(Object key) {
+    Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
+    // spread方法能保证返回结果是正数
+    int h = spread(key.hashCode());
+    if ((tab = table) != null && (n = tab.length) > 0 &&
+        (e = tabAt(tab, (n - 1) & h)) != null) {
+        // 如果头节点已经是要查找的key
+        if ((eh = e.hash) == h) {
+            if ((ek = e.key) == key || (ek != null && key.equals(ek)))
+                return e.val;
+        }
+        // hash为负数表示该bin在扩容中或是treebin，这时调用find方法来查找
+        else if (eh < 0)
+            return (p = e.find(h, key)) != null ? p.val : null;
+        // 正常遍历链表，用equals来比较
+        while ((e = e.next) != null) {
+            if (e.hash == h &&
+                ((ek = e.key) == key || (ek != null && key.equals(ek))))
+                return e.val;
+        }
+    }
+    return null;
+}
+```
+
+**put流程**
+
+```java
+public V put(K key, V value) {
+    return putVal(key, value, false);
+}
+
+/** Implementation for put and putIfAbsent */
+final V putVal(K key, V value, boolean onlyIfAbsent) {
+    if (key == null || value == null) throw new NullPointerException();
+    // spread方法会综合高位地位，具有更好的hash性
+    int hash = spread(key.hashCode());
+    int binCount = 0;
+    for (Node<K,V>[] tab = table;;) {
+        // f是链表头节点
+        // fh是链表头结点的hash
+        // i是链表在table中的下标
+        Node<K,V> f; int n, i, fh;
+        //要创建table
+        if (tab == null || (n = tab.length) == 0)
+            // 初始化table使用了cas，无需synchronized创建成功，进入下一轮循环
+            tab = initTable();
+        // 要创建链表头节点
+        else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+            // 添加链表头节点使用了cas，无需synchronized
+            if (casTabAt(tab, i, null,
+                         new Node<K,V>(hash, key, value, null)))
+                break;                   // no lock when adding to empty bin
+        }
+        // 帮忙扩容
+        else if ((fh = f.hash) == MOVED)
+            tab = helpTransfer(tab, f);
+        else {
+            V oldVal = null;
+            // 锁住链表头节点
+            synchronized (f) {
+                // 再次确认链表头节点没有被移动
+                if (tabAt(tab, i) == f) {
+                    // 链表
+                    if (fh >= 0) {
+                        binCount = 1;
+                        // 遍历链表
+                        for (Node<K,V> e = f;; ++binCount) {
+                            K ek;
+                            // 找到相同的key
+                            if (e.hash == hash &&
+                                ((ek = e.key) == key ||
+                                 (ek != null && key.equals(ek)))) {
+                                oldVal = e.val;
+                                // 更新
+                                if (!onlyIfAbsent)
+                                    e.val = value;
+                                break;
+                            }
+                            Node<K,V> pred = e;
+                            // 已经是最后的节点了，新增Node，追加至链表尾
+                            if ((e = e.next) == null) {
+                                pred.next = new Node<K,V>(hash, key,
+                                                          value, null);
+                                break;
+                            }
+                        }
+                    }
+                    // 红黑树
+                    else if (f instanceof TreeBin) {
+                        Node<K,V> p;
+                        binCount = 2;
+                        // putTreeVal会看key是否已经在树中，是，则返回对应的TreeNode
+                        if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key,
+                                                       value)) != null) {
+                            oldVal = p.val;
+                            if (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                }
+            }
+            if (binCount != 0) {
+                if (binCount >= TREEIFY_THRESHOLD)
+                    // 如果链表长度大于等于阈值8，进行链表转为红黑树
+                    treeifyBin(tab, i);
+                if (oldVal != null)
+                    return oldVal;
+                break;
+            }
+        }
+    }
+    // 增加size计数，其中用到的原理和LongAdder差不多使用了Cell[]，设置了多个累加单元
+    addCount(1L, binCount);
+    return null;
+}
+```
+
