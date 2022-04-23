@@ -12,7 +12,6 @@
 * 调用sleep会让当前线程从`Running`进入`Timed Waiting`（阻塞状态）状态
 * 其他线程可以使用`interrupt`方法打断正在睡眠的线程，这时sleep方法会抛出`InterruptedException`
 * 睡眠结束后的线程未必会立刻得到执行
-* 建议用TimeUnit的sleep代替Thread的sleep来获得更好的可读性
 
 **yield**
 
@@ -1060,6 +1059,8 @@ public static ExecutorService newSingleThreadExecutor() {
 2. ThreadLocal底层是通过ThreadLocalMap来实现的，每个Thread对象（注意不是ThreadLocal对象）中都存在一个ThreadLocalMap，Map的key为ThreadLocal对象，Map的value为需要缓存的值
 3. 如果在线程池中使用ThreadLocal会造成内存泄漏，因为当ThreadLocal对象使用完之后，应该要把设置的key，value也就是Entry对象进行回收，但线程池中的线程不会回收，而线程对象是通过强引用指向ThreadLocalMap，ThreadLocalMap也是通过强引用指向Entry对象，线程不被回收，Entry对象就不会被回收，从而出现内存泄漏，解决办法是，当使用了ThreadLocal对象之后，手动调用ThreadLocal的remove方法，手动清除Entry对象。
 
+
+
 ## 0x24. CopyOnWriteArrayList
 
 CopyOnWriteArrayList是java.util.concurrent包提供的方法，它实现了读操作无锁，写操作则通过操作操作底层数组的新副本来实现（将之前的ArrayList拷贝一份，写操作在该副本上进行，在完成写之前，需要对写加锁，写操作完成后，将有来的引用指向新副本），是一种读写分离的并发策略。
@@ -1262,6 +1263,4 @@ size计算实际发生在put，remove改变集合元素的操作之中
 * 有竞争发生，新建counterCells，象棋中的一个cell累加计数
   * counterCells初始有两个cell
   * 如果技术竞争比较激烈，会创建新的cell来累加计数
-
-## 0x26. LinkedBlockingQueue
 
